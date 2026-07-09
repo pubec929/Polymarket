@@ -6,7 +6,9 @@ DECIMALS = 1_000_000
 W = 64
 SEL = 8
 
-def parse_calldata(calldata: str, target_wallet: str) -> Optional[Transaction]:
+def parse_calldata(calldata: str | None, target_wallet: str) -> Optional[Transaction]:
+    if calldata is None:
+        return None
     data = calldata.lower().removeprefix("0x").strip()
     wallet_word = target_wallet.lower().removeprefix("0x").zfill(64)
     target_wallet_lc = target_wallet.lower()
