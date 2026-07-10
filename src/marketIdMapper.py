@@ -79,7 +79,6 @@ def getIdMap(slugs: list[str]):
         return "0x" + _zero_pad(token_id[2:], 64)
     
     markets = getMarketsBySlug(slugs)
-    print("markets", markets)
     id_map: dict[str, MarketData] = {}
     for market in markets:
         token_id_up = _convert_token_id(market.outcomes.yes.token_id)
@@ -107,7 +106,6 @@ def get_historic_id_map(slugs: list[str]):
         return "0x" + _zero_pad(token_id[2:], 64)
     
     markets = [getMarketBySlug(slug) for slug in slugs]
-    print("markets", markets)
     id_map: dict[str, MarketData] = {}
     for market in markets:
         token_id_up = _convert_token_id(market.outcomes.yes.token_id)
