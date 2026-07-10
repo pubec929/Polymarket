@@ -1,9 +1,6 @@
-from src.types import Position, Positions, Trades
+from src.types import Position, Positions, Trades, display
 from src.types import load_metadata, load_trades
-
-def sort_dict(dictionary: dict):
-    keys = sorted(dictionary.keys())
-    return {k: dictionary[k] for k in keys}
+from src.analytics.getTrades import _fetch_trades
 
 def calcPositions(trades: Trades):
         positions: Positions = {}
@@ -23,11 +20,18 @@ def calcPositions(trades: Trades):
     
         return positions
 
-def positionSummary(file_path):
-    metadata = load_metadata(file_path)
-    trades = load_trades(metadata.session_logs_path) 
-    positions = calcPositions(trades)
 
-    positions = sort_dict(positions)
-    for pos in positions.values():
-        pos.display()
+def _load_positions(path) -> Positions:
+    trades = load_trades(path)
+    return calcPositions(trades)
+
+def _fetch_positions(wallet: str, timestamp: int, duration: int) -> Positions:
+    trades = _fetch_trades(wallet, timestamp, duration)
+    return calcPositions(trades)
+
+def get_positions():    
+    ...
+def showPositions(file_path):
+    metadata = load_metadata(file_path)
+    positions = _load_positions(metadata.session_logs_path)
+    display(positions)

@@ -177,10 +177,71 @@ class Position:
         console.print(panel)
 
 @dataclass
-class MarketSummary:
-    upPosition: Position
-    downPosition: Position
+class Market:
+    upPos: Position | None
+    downPos: Position | None
     outcome: marketOutcome
+
+    def display(self):
+        #market_color = getMarketColor(self.upPos.market_name)
+        #outcome_color = ColorMap.GREEN if self.outcome == "up" else ColorMap.RED
+        
+        market_name = self.upPos.market_name if self.upPos else self.downPos.market_name
+        market_color = getMarketColor(market_name)
+
+        if self.outcome == "up":
+            outcome_color = ColorMap.GREEN
+        elif self.outcome == "down":
+            outcome_color = ColorMap.RED
+        else:
+            outcome_color = ColorMap.ORANGE # unresolved / pending
+
+        total_invested = sum(p.usdc_amount for p in (self.upPos, self.downPos) if p is not None)
+
+        payout = 0.0
+        if self.outcome == "up" and self.upPos is not None:
+            payout = self.upPos.shares
+        elif self.outcome == "down" and self.downPos is not None:
+            payout = self.downPos.shares
+
+        pnl = payout - total_invested
+        pnl_pct = (pnl / total_invested * 100) if total_invested else 0.0
+        pnl_color = ColorMap.GREEN if pnl >= 0 else ColorMap.RED
+        sign = "+" if pnl >= 0 else ""
+
+        table = Table(show_header=False, box=box.SIMPLE_HEAVY, padding=(0, 2))
+        table.add_column("Field", style="bold", width=18)
+        table.add_column("Value", style="blue")
+
+        table.add_row("Market", f"[{market_color}]{market_name}[/]")
+        table.add_row("Outcome", f"[bold {outcome_color}]{self.outcome}[/]")
+        table.add_row()
+        table.add_row("Total Invested", f"[yellow]${total_invested:,.2f}[/yellow]")
+        table.add_row("Payout", f"[cyan]${payout:,.2f}[/cyan]")
+        table.add_row("P/L", f"[bold {pnl_color}]{sign}${pnl:,.2f}[/]")
+        table.add_row("P/L %", f"[bold {pnl_color}]{sign}{pnl_pct:.1f}%[/]")
+        table.add_row()
+
+        if self.upPos:
+            table.add_row(
+                "Up Shares",
+                f"[green]{self.upPos.shares:,.1f}[/green] @ [green]{self.upPos.price_per_share*100:.1f}¢[/green] "
+                f"(${self.upPos.usdc_amount:,.2f})",
+            )
+        if self.downPos:
+            table.add_row(
+                "Down Shares",
+                f"[red]{self.downPos.shares:,.1f}[/red] @ [red]{self.downPos.price_per_share*100:.1f}¢[/red] "
+                f"(${self.downPos.usdc_amount:,.2f})",
+            )
+
+        panel = Panel(
+            table,
+            title="[bold blue]Market Summary[/bold blue]",
+            border_style=pnl_color,
+            expand=False,
+        )
+        console.print(panel)
 
 @dataclass
 class Metadata:
@@ -211,9 +272,9 @@ def save_trades(trades: Trades, timestamp: int) -> str:
     saveAsJSON(trades, filePath)
     return filePath
 
-def load_trades(file_path) -> Trades:
+def load_trades(path: str) -> Trades:
     """returns a list of trade objects from a json file"""
-    with open(file_path, "r") as file:
+    with open(path, "r") as file:
         data = json.load(file)
     return {key: Trade(**elem) for key, elem in data.items()}
 
@@ -248,7 +309,18 @@ def init_trade(tx_hash: str, tx: Transaction, idMap: IdMap, detection_time: floa
         detection_time=detection_time
     )
 
+def sort_dict(dictionary: dict):
+    keys = sorted(dictionary.keys())
+    return {k: dictionary[k] for k in keys}
+
+def display(collection: Trades | Positions | Markets):
+    collection = sort_dict(collection)
+    for obj in collection.values():
+        if hasattr(obj, "display"):
+            obj.display()
+
 type Transactions = dict[str, Transaction]
 type Trades = dict[str, Trade]
 type Positions = dict[str, Position]
+type Markets = dict[str, Market]
 type IdMap = dict[str, MarketData]

@@ -9,7 +9,7 @@ class ColorMap:
 class MarketColorMap:
     ethereum = "#005FFF"     
     bitcoin = "#FFAF00"      
-    solana = "#5F00D7"       
+    solana = "#9B51F7"       
     xrp = "#0087FF"   
     default = ""       
 

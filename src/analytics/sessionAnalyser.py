@@ -4,9 +4,9 @@ from rich.console import Console
 
 from src.analytics.menu import selectFileMenu, selectActionMenu
 
-from src.analytics.positionSummary import positionSummary
+from src.analytics.positionSummary import showPositions
 from src.analytics.getMissedTxs import getMissedTxs
-from src.analytics.marketSummary import marketSummary
+from src.analytics.marketSummary import showMarkets
 from src.types import list_metadata_files, BASE_PATH_METADATA
 
 console = Console()
@@ -24,13 +24,14 @@ def selectAction(actions):
 
 def run():
     actions = {
-        "position summary": positionSummary,
+        "position summary": showPositions,
         "show missed transactions": getMissedTxs,
-        "market summary": marketSummary
+        "market summary": showMarkets
     }
 
     session_file = selectFile()
     func = selectAction(actions)
+    print(session_file)
     print("\n\n")
     func(session_file)
 
