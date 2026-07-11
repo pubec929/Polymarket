@@ -35,3 +35,7 @@ def showPositions(file_path):
     metadata = load_metadata(file_path)
     positions = _load_positions(metadata.session_logs_path)
     display(positions)
+
+if __name__ == "__main__":
+    positions = _fetch_positions("0xce25e214d5cfe4f459cf67f08df581885aae7fdc", 1783723500, 300)
+    display(positions)

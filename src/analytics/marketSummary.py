@@ -36,7 +36,15 @@ def _fetch_markets(wallet: str, timestamp: int, duration: int) -> Markets:
     positions = _fetch_positions(wallet, timestamp, duration)
     return calcMarkets(positions)
 
-def showMarkets(path):
+def showMarketsFromFile(path):
     metadata = load_metadata(path)
     markets = _load_markets(metadata.session_logs_path)
     display(markets)
+
+def showMarketsFromWallet(wallet: str, timestamp: int, duration: int):
+    markets = _fetch_markets(wallet, timestamp, duration)
+    display(markets)
+
+if __name__ == "__main__":
+    wallet = "0xf3531b23b504cf0aed4ff21325232b2a2d496685"
+    showMarketsFromWallet(wallet, 1783771800 - 3000, 3000)
