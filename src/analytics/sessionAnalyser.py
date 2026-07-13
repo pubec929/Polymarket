@@ -1,10 +1,10 @@
 from rich.console import Console
 
-from src.analytics.menu import selectMenu
+from src.analytics.menu import selectMenu, showTitle
 
-from src.analytics.positionSummary import showPositions
+from src.analytics.positionSummary import showPositionsFromFile, showExpectedPositions
 from src.analytics.getMissedTxs import getMissedTxs
-from src.analytics.marketSummary import showMarketsFromFile
+from src.analytics.marketSummary import showMarketsFromFile, showExpectedMarktes
 from src.types import list_metadata_files, BASE_PATH_METADATA
 
 from datetime import datetime
@@ -25,15 +25,18 @@ def selectFile() -> str:
 
 def selectAction():
     actions = {
-        "position summary": showPositions,
         "show missed transactions": getMissedTxs,
-        "market summary": showMarketsFromFile
+        "show positions": showPositionsFromFile,
+        "show markets": showMarketsFromFile,
+        "show expected positions": showExpectedPositions,
+        "show expected market": showExpectedMarktes
     }
 
     func = selectMenu("Select an action...", actions)
     return func
 
 def run():
+    showTitle("Session Analysis", "bold yellow")
     file_path = selectFile()
     func = selectAction()
     func(file_path)

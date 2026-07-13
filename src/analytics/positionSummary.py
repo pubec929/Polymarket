@@ -29,13 +29,17 @@ def _fetch_positions(wallet: str, timestamp: int, duration: int) -> Positions:
     trades = _fetch_trades(wallet, timestamp, duration)
     return calcPositions(trades)
 
-def get_positions():    
-    ...
-def showPositions(file_path):
+def showPositionsFromFile(file_path):
     metadata = load_metadata(file_path)
     positions = _load_positions(metadata.session_logs_path)
     display(positions)
 
-if __name__ == "__main__":
-    positions = _fetch_positions("0xce25e214d5cfe4f459cf67f08df581885aae7fdc", 1783723500, 300)
+def showPositionsFromPast(wallet: str, timestamp: int, duration: int):
+    positions = _fetch_positions(wallet, timestamp, duration)
+    display(positions)
+
+def showExpectedPositions(file_path):
+    metadata = load_metadata(file_path)
+    duration = metadata.end_time - metadata.start_time
+    positions = _fetch_positions(metadata.wallet, metadata.start_time, duration)
     display(positions)

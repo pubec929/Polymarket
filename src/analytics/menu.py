@@ -1,5 +1,9 @@
 import questionary
 import sys
+from pyfiglet import Figlet
+from rich.console import Console
+
+console = Console()
 
 def selectMenu(title: str, options):
     if isinstance(options, dict):
@@ -19,3 +23,8 @@ def selectMenu(title: str, options):
     if selected == "Quit":
         sys.exit()
     return selected
+
+def showTitle(title: str, style: str):
+    fig = Figlet(font="slant", width=200)
+    ascii_title = fig.renderText(title)
+    console.print(f"[{style}]{ascii_title}[/]")

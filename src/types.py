@@ -237,7 +237,7 @@ class Market:
 
         panel = Panel(
             table,
-            title="[bold blue]Market Summary[/bold blue]",
+            title="[bold blue]Market[/bold blue]",
             border_style=pnl_color,
             expand=False,
         )
@@ -314,7 +314,7 @@ def sort_dict(dictionary: dict):
     return {k: dictionary[k] for k in keys}
 
 def display(collection: Trades | Positions | Markets):
-    collection = sort_dict(collection)
+    #values = collection.values()
     for obj in collection.values():
         if hasattr(obj, "display"):
             obj.display()

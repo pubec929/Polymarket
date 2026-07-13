@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+data/
+analyse.py
+record_tx_hashes.py

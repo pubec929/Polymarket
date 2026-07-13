@@ -89,7 +89,7 @@ class MempoolMonitor:
                 return
             
             trade = init_trade(tx_hash, transaction, self.id_map, detection_time)
-            trade.display()
+            #trade.display()
             self.trades[tx_hash] = trade
 
         except Exception as e:
