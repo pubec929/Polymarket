@@ -17,7 +17,7 @@ from src.types import IdMap, Trades, init_trade, Metadata, save_metadata, save_t
 
 from src.utils.main import getAllPositionsValue, getBalance, get_start_timestamp, clear_console
 from src.marketFilter import filter_target_ids, parse_filters
-
+from src.analytics.menu import showTitle
 from src.parsers.hex_parser import parse_calldata
 
 from rich import print
@@ -130,6 +130,8 @@ async def monitor_trades():
     monitor = None
     end_timestamp = None
     
+    showTitle("Mempool monitor", "bold yellow")
+
     console.log("Initializing...")
     console.print(f"  Monitoring trades from: {wallet}")
     console.print(f"  wallet balance: ${getBalance(wallet):,.2f}")

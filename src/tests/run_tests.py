@@ -43,7 +43,10 @@ def test_hex_parser(parse_hex_data):
  
     start_time = time.perf_counter()
     with console.status("[bold cyan]Running tests...", spinner="dots") as status:
-        for tx_hash, transaction in test_cases.items():
+        for test_case in test_cases:
+            tx_hash = test_case.tx_hash
+            transaction = test_case.tx
+            print(tx_hash, transaction)
             total_tests += 1
             hex_data = get_hex_data(tx_hash)
             parsed= parse_hex_data(hex_data, transaction.wallet)

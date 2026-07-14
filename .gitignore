@@ -222,3 +222,4 @@ __marimo__/
 data/
 analyse.py
 record_tx_hashes.py
+data/test_data/test_cases.json
