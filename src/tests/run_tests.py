@@ -41,15 +41,16 @@ def test_hex_parser(parse_hex_data):
     results_table.add_column("Expected", style="green")
     results_table.add_column("Got", style="red")
  
-    start_time = time.perf_counter()
+    total_time = 0
     with console.status("[bold cyan]Running tests...", spinner="dots") as status:
         for test_case in test_cases:
             tx_hash = test_case.tx_hash
             transaction = test_case.tx
-            print(tx_hash, transaction)
             total_tests += 1
             hex_data = get_hex_data(tx_hash)
+            start_time = time.perf_counter()
             parsed= parse_hex_data(hex_data, transaction.wallet)
+            total_time += time.perf_counter() - start_time
             if parsed == transaction:
                 passed += 1
                 results_table.add_row(
@@ -115,7 +116,6 @@ def test_hex_parser(parse_hex_data):
         console.print()
 
     # Time stats
-    total_time = time.perf_counter() - start_time
     avg_time = total_time / total_tests if total_tests else 0
 
     time_summary = Table.grid(padding=(0, 4))
@@ -123,7 +123,7 @@ def test_hex_parser(parse_hex_data):
     time_summary.add_column(justify="center")
     time_summary.add_row(
         f"[dim]Total time[/dim]\n[bold white]{total_time:.3f}s[/bold white]",
-        f"[dim]Average / test[/dim]\n[bold cyan]{avg_time * 1000:.2f} ms[/bold cyan]",
+        f"[dim]Average / test[/dim]\n[bold cyan]{avg_time * 1000:.3f} ms[/bold cyan]",
     )
 
     console.print(
