@@ -20,7 +20,6 @@ async def BUY_limit_order(client: AsyncSecureClient, token_id: str, price: str, 
         size=size,
     )
 
-
 async def SELL_limit_order(client: AsyncSecureClient, token_id: str, price: str, size: str) -> OrderResponse:
     return await client.place_limit_order(
         token_id=token_id,
@@ -30,11 +29,11 @@ async def SELL_limit_order(client: AsyncSecureClient, token_id: str, price: str,
     )
 
 
-async def BUY_market_order(client: AsyncSecureClient, token_id: str, amount: str) -> OrderResponse:
+async def BUY_market_order(client: AsyncSecureClient, token_id: str, usdc_amount: str) -> OrderResponse:
     return await client.place_market_order(
         token_id=token_id,
         side="BUY",
-        amount=amount,
+        amount=usdc_amount,
     )
 
 
@@ -57,8 +56,8 @@ async def main() -> None:
     #     print(await client.cancel_all())
     client = await init_client()
 
-    #response = await BUY_limit_order(client, token_id, "0.9", "15")
-    response = await SELL_limit_order(client, token_id, "0.1", "33.3")
+    response = await BUY_limit_order(client, token_id, "0.9", "15")
+    
     print(response)
 
 if __name__ == "__main__":

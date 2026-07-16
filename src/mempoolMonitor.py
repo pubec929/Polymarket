@@ -1,7 +1,7 @@
 from web3 import Web3
 from websockets import connect
 import asyncio
-import json
+import orjson
 import time
 from datetime import datetime
 
@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import os
 import sys
 import argparse
+import questionary
 
 from src.marketIdMapper import getIdMap, load_market_slugs, saveIdMap, getLastTimestamp, getFilePath
 from src.types import IdMap, Trades, init_trade, Metadata, save_metadata, save_trades
@@ -19,8 +20,8 @@ from src.utils.main import getAllPositionsValue, getBalance, get_start_timestamp
 from src.marketFilter import filter_target_ids, parse_filters
 from src.analytics.menu import showTitle
 from src.parsers.hex_parser import parse_calldata
+from src.place_orders import init_client, BUY_limit_order
 
-from rich import print
 from rich.console import Console
 
 load_dotenv()
@@ -28,7 +29,7 @@ load_dotenv()
 ALCHEMY_API_KEY = os.getenv("ALCHEMY_API_KEY") or ""
 WSS_URL = f"wss://polygon-mainnet.g.alchemy.com/v2/{ALCHEMY_API_KEY}"
 
-DEFAULT_WALLET = "0x13e0d447520ebe7f8eeaf7817211201b2c585204"
+DEFAULT_WALLET = "0xf3531b23b504cf0aed4ff21325232b2a2d496685"
 
 # Polymarket contract addresses
 CTF_EXCHANGE = "0xE111180000d2663C0091e4f400237545B87B996B"
@@ -37,10 +38,12 @@ METHOD_ID = "0x3c2b4399"
 
 DEFAULT_TIME = 300
 
+MY_WALLET = os.getenv("WALLET") or ""
+
 console = Console(log_time_format = lambda dt: f"[{dt.strftime("%H:%M:%S.%f")[:-3]}]") # type: ignore
 
 class MempoolMonitor:
-    def __init__(self, wallet: str, id_map: IdMap, filter_ids: set[str] | None):
+    def __init__(self, wallet: str, id_map: IdMap, filter_ids: set[str] | None, client, is_activated):
         self.wallet = wallet.lower()
         self.id_map = id_map
         self.known_token_ids = set(id_map.keys())
@@ -50,6 +53,11 @@ class MempoolMonitor:
 
         self.active_filter = bool(filter_ids)
         self.filter_ids = filter_ids
+
+        self.client = client
+
+        self.is_activated = is_activated
+        self.factor = 10
     async def process_pending_transaction(self, tx_data: Dict):
         """Process a pending (mempool) transaction"""
         
@@ -84,18 +92,28 @@ class MempoolMonitor:
 
             token_id = transaction.token_id
             
+            if self.is_activated:
+                await self.buy(token_id, transaction.shares)
             if self.active_filter and token_id not in self.filter_ids:
                 print("filtered out", self.id_map[token_id].question if token_id in self.id_map else "Unknow market")
                 return
             
             trade = init_trade(tx_hash, transaction, self.id_map, detection_time)
-            #trade.display()
+            trade.display()
             self.trades[tx_hash] = trade
-
+            sys.exit()
         except Exception as e:
             print(f"❌ Error processing pending tx: {e}")
             import traceback
             traceback.print_exc()
+
+    async def buy(self, token_id: str, shares: float):
+        buy_token_id = str(int(token_id, 16))
+        buy_shares = str(shares / self.factor)
+        response = await BUY_limit_order(self.client, buy_token_id, "0.9", buy_shares)
+        console.log(response)
+        # todo save transaction
+
 
 def shutdown(monitor: MempoolMonitor | None, start_timestamp: int, end_timestamp: int | None, market_filter: str, save_logs: bool):
     end_timestamp = end_timestamp or int(time.time())
@@ -117,6 +135,7 @@ async def monitor_trades():
     parser.add_argument("-w", "--wallet", default=DEFAULT_WALLET, help="the specified target wallet")
     parser.add_argument("-f", "--filter", default="", help="Filter format 'market_name/market_type;market_name/market_type'")
     parser.add_argument("--logs", help="save logs after execution", action="store_true")
+    parser.add_argument("--activate", help="Warning!!!Uses real money for polymarket bets. Use with caution", action="store_true")
     args = parser.parse_args()
 
     runtime: int = args.runtime
@@ -124,6 +143,7 @@ async def monitor_trades():
     wallet: str = args.wallet
     market_filter: str = args.filter
     is_save_logs: bool = args.logs
+    is_activated: bool = args.activate
 
     filters = parse_filters(market_filter) if market_filter else None
 
@@ -133,13 +153,19 @@ async def monitor_trades():
     showTitle("Mempool monitor", "bold yellow")
 
     console.log("Initializing...")
-    console.print(f"  Monitoring trades from: {wallet}")
-    console.print(f"  wallet balance: ${getBalance(wallet):,.2f}")
-    console.print(f"  positions value: ${getAllPositionsValue(wallet):,.2f}")
-    console.print(f"  Expected runtime: {runtime} seconds")
+    console.log(f"Monitoring trades from: {wallet}")
+    console.log(f"wallet balance: ${getBalance(wallet):,.2f}")
+    console.log(f"positions value: ${getAllPositionsValue(wallet):,.2f}")
+    console.log(f"Expected runtime: {runtime} seconds")
 
-    print("=" * 80)
+    if is_activated:
+        console.log("[bold red] !!!WARNING!!!")
+        console.log("[bold red] Copy trading is activated. Real money will be used [/]")
+        console.log(f"Your wallet balance: ${getBalance(MY_WALLET):,.2f}")
+    else:
+        console.log(f"[bold yellow]Copy trading is not activated[/]")
     
+    print()
     message_count = 0
 
     start_timestamp = int(time.time())
@@ -147,17 +173,18 @@ async def monitor_trades():
         start_timestamp = get_start_timestamp(start_time)
         if start_timestamp < time.time():
             raise ValueError("Invalid starting time! Adjust or deactivate scheduled start")
-        print("Scheduled start at: " + start_time)
+        console.log("Scheduled start at: " + start_time)
 
     slugs = load_market_slugs(start_timestamp, start_timestamp + runtime)
     idMap = getIdMap(slugs)
-    console.log("[bold green] Fetched market id map [/]")
+    console.log("[bold green]Fetched market id map [/]")
 
     filter_ids = filter_target_ids(idMap, filters) if filters else None
     if filters: console.log("[bold green]Filter is active[/]")
-    else: console.log("[bold red]Filter is not active[/]")
+    else: console.log("[bold yellow]Filter is not active[/]")
     
-    monitor = MempoolMonitor(wallet, idMap, filter_ids)
+    client = await init_client()
+    monitor = MempoolMonitor(wallet, idMap, filter_ids, client, is_activated)
 
     while start_timestamp > time.time():
         time.sleep(0.1)
@@ -173,14 +200,13 @@ async def monitor_trades():
                 ]
             }
             
-            await websocket.send(json.dumps(pending_subscription))
-            response = await websocket.recv()
+            await websocket.send(orjson.dumps(pending_subscription))
+            await websocket.recv()
             console.log(f"Subscribed to PENDING transactions (mempool)")
-            console.print(f"Response: {response}\n")
     
             #console.log(datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
             console.log("LIVE - Waiting for trades...")
-            print("=" * 80)
+            print("")
             
             running = True
             #trades: List[Trade] = []
@@ -190,9 +216,9 @@ async def monitor_trades():
                 
                 # Print every 1000th message to show we're getting data
                 if message_count == 100 or message_count % 1000 == 0:
-                    console.log(f"Received {message_count} messages...")
+                    print(f"Received {message_count} messages...")
                 
-                data = json.loads(message)
+                data = orjson.loads(message)
 
                 if "params" in data and "result" in data["params"]:
                     result = data["params"]["result"]
