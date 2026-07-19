@@ -14,13 +14,11 @@ def get_tx_hashes(wallet: str, start_timestamp: int | None = None, end_timestamp
     tx_logs = get_tx_logs(wallet, start_timestamp, end_timestamp, num)
     return [tx_log["hash"] for tx_log in tx_logs]
 
-def get_tx_logs(wallet: str, start_timestamp: int | None = None, end_timestamp: int | None = None, num: int | None = None) -> list[dict]:
+def _get_tx_logs(wallet: str, start_timestamp: int | None = None, end_timestamp: int | None = None, num: int | None = None) -> list[dict]:
     """
     https://docs.etherscan.io/api-reference/endpoint/tokentx
     returns the transaction logs of the n-most recent transactions of the specified wallet
     """
-    def _is_tx_log_valid(tx_log: dict):
-        return tx_log["methodId"] == METHOD_ID
 
     params = {
         "apikey": ETHERSCAN_API_KEY,
@@ -41,10 +39,21 @@ def get_tx_logs(wallet: str, start_timestamp: int | None = None, end_timestamp: 
         params["endblock"] = end_block
 
     response = requests.get(URL, params).json()
-    tx_logs = response["result"]
+    return response["result"]
+    
+def get_tx_logs(wallet: str, start_timestamp: int | None = None, end_timestamp: int | None = None, num: int | None = None, retries: int = 10) -> list[dict]:
+    def _is_tx_log_valid(tx_log: dict):
+        return tx_log["methodId"] == METHOD_ID
+
+    tx_logs = []
+    for _ in range(retries):
+        tx_logs = _get_tx_logs(wallet, start_timestamp, end_timestamp, num)
+        if tx_logs:
+            break
+        print("Failed to fetch tx logs. Retrying ...")
+    
     valid_tx_logs = [log for log in tx_logs if _is_tx_log_valid(log)]
     return valid_tx_logs[:num] if num else valid_tx_logs
-    
 
 def get_block_number_by_timestamp(timestamp: int, closest: Literal["before", "after"]):
     """
