@@ -1,0 +1,10 @@
+orjson==3.11.9
+polymarket-client==0.1.0b13
+pyfiglet==1.0.4
+python-dotenv==1.2.2
+pytz==2026.2
+questionary==2.1.1
+requests==2.34.2
+rich==15.0.0
+web3==7.16.0
+websockets==14.2
