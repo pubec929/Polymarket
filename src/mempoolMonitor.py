@@ -43,15 +43,16 @@ MY_WALLET = os.getenv("WALLET") or ""
 console = Console(log_time_format = lambda dt: f"[{dt.strftime("%H:%M:%S.%f")[:-3]}]") # type: ignore
 
 class MempoolMonitor:
-    def __init__(self, wallet: str, id_map: IdMap, filter_ids: set[str] | None, client, is_activated):
+    def __init__(self, wallet: str, id_map: IdMap, filter_ids: set[str], client, is_activated):
         self.wallet = wallet.lower()
+        self.wallet_padded = f"000000000000000000000000{self.wallet[2:]}"
+
         self.id_map = id_map
         self.known_token_ids = set(id_map.keys())
         
         self.seen_txs: Set[str] = set()
         self.trades: Trades = {}
 
-        self.active_filter = bool(filter_ids)
         self.filter_ids = filter_ids
 
         self.client = client
@@ -64,8 +65,8 @@ class MempoolMonitor:
         detection_time = time.time()
         
         try:
-            tx_hash = tx_data.get('hash', "")
-            hex_data = tx_data.get('input', '')
+            tx_hash: str = tx_data.get('hash', "")
+            hex_data: str = tx_data.get('input', '')
             
             # Quick filters
             if tx_hash in self.seen_txs:
@@ -77,11 +78,10 @@ class MempoolMonitor:
             if not hex_data or len(hex_data) < 10:
                 return
             
-            if hex_data[:len(METHOD_ID)] != METHOD_ID:
+            if not hex_data.startswith(METHOD_ID):
                 return
             
-            wallet_padded = f"000000000000000000000000{self.wallet[2:]}"
-            if wallet_padded not in hex_data: # normally the target id sits in the ninth chunk
+            if self.wallet_padded not in hex_data: # normally the target id sits in the ninth chunk
                 return
            
             # Try to extract token ID
@@ -92,14 +92,15 @@ class MempoolMonitor:
 
             token_id = transaction.token_id
             
-            if self.is_activated:
-                await self.buy(token_id, transaction.shares)
-            if self.active_filter and token_id not in self.filter_ids:
+            if token_id not in self.filter_ids:
                 print("filtered out", self.id_map[token_id].question if token_id in self.id_map else "Unknow market")
                 return
             
+            if self.is_activated and transaction.action == "BUY":
+                await self.buy(token_id, transaction.shares)
             trade = init_trade(tx_hash, transaction, self.id_map, detection_time)
-            trade.display()
+            if self.is_activated:
+                trade.display()
             self.trades[tx_hash] = trade
             sys.exit()
         except Exception as e:
@@ -179,7 +180,7 @@ async def monitor_trades():
     idMap = getIdMap(slugs)
     console.log("[bold green]Fetched market id map [/]")
 
-    filter_ids = filter_target_ids(idMap, filters) if filters else None
+    filter_ids = filter_target_ids(idMap, filters) if filters else set()
     if filters: console.log("[bold green]Filter is active[/]")
     else: console.log("[bold yellow]Filter is not active[/]")
     
