@@ -2,6 +2,7 @@ from src.types import load_metadata, load_trades, Positions, Markets, Market, Po
 
 from src.analytics.historic_trade_data import get_market_outcome
 from src.analytics.positionSummary import _load_positions, _fetch_positions
+from src.analytics.marketsDisplay import compareMarkets
 from rich import print
 
 def calcMarkets(positions: Positions) -> Markets:
@@ -43,7 +44,7 @@ def showMarketsFromFile(path):
 
 def showMarketsFromPast(wallet: str, timestamp: int, duration: int):
     markets = _fetch_markets(wallet, timestamp, duration)
-    display(markets)
+    compareMarkets(markets)
 
 def showExpectedMarktes(file_path: str):
     metadata = load_metadata(file_path)
